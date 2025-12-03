@@ -103,6 +103,7 @@ Route::get('/reload-config', function () {
 });
 
 Route::get('/run-migrations', [MigrationController::class, 'run']);
+Route::get('/create-admin', [MigrationController::class, 'createAdmin']);
 Route::get('/test', function () {
     try {
         // Test database connection
