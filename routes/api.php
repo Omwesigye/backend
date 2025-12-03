@@ -29,6 +29,80 @@ use App\Http\Controllers\MigrationController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+Route::get('/run-migrations', [MigrationController::class, 'run']);
+Route::get('/test', function () {
+    try {
+        // Test database connection
+        \DB::connection()->getPdo();
+        
+        // Check if migrations ran
+        $tables = \DB::select('SELECT table_name FROM information_schema.tables WHERE table_schema = ?', ['public']);
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'API is working!',
+            'database' => [
+                'connected' => true,
+                'name' => \DB::connection()->getDatabaseName(),
+                'tables_count' => count($tables),
+                'tables' => array_column($tables, 'table_name')
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Database connection failed',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+Route::get('/diagnose', function () {
+    try {
+        // Check basic Laravel
+        $checks = [];
+        
+        // 1. Check APP_KEY
+        $checks['app_key'] = !empty(env('APP_KEY')) ? '✓ Set' : '✗ Missing';
+        
+        // 2. Check database connection
+        try {
+            \DB::connection()->getPdo();
+            $checks['database'] = '✓ Connected';
+            $checks['db_name'] = \DB::connection()->getDatabaseName();
+        } catch (\Exception $e) {
+            $checks['database'] = '✗ Error: ' . $e->getMessage();
+        }
+        
+        // 3. Check storage permissions
+        $checks['storage_writable'] = is_writable(storage_path()) ? '✓ Writable' : '✗ Not writable';
+        $checks['bootstrap_writable'] = is_writable(base_path('bootstrap/cache')) ? '✓ Writable' : '✗ Not writable';
+        
+        // 4. Check environment
+        $checks['environment'] = app()->environment();
+        $checks['debug_mode'] = config('app.debug') ? 'true (should be false in production)' : 'false';
+        
+        // 5. Check loaded .env file
+        $checks['env_file'] = file_exists(base_path('.env')) ? '✓ Exists' : '✗ Missing';
+        
+        return response()->json([
+            'status' => 'diagnostic',
+            'checks' => $checks,
+            'timestamp' => now()->toISOString(),
+            'laravel_version' => app()->version(),
+            'php_version' => PHP_VERSION
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Diagnostic failed',
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
+
 // Password Reset
 Route::post('/password/forgot', [PasswordResetController::class, 'requestCode']);
 Route::post('/password/verify', [PasswordResetController::class, 'verifyCode']);
@@ -110,78 +184,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/chat/conversations', [ChatController::class, 'getConversations']);
 
 
-    Route::get('/run-migrations', [MigrationController::class, 'run']);
 
-    Route::get('/test', function () {
-    try {
-        // Test database connection
-        \DB::connection()->getPdo();
-        
-        // Check if migrations ran
-        $tables = \DB::select('SELECT table_name FROM information_schema.tables WHERE table_schema = ?', ['public']);
-        
-        return response()->json([
-            'status' => 'success',
-            'message' => 'API is working!',
-            'database' => [
-                'connected' => true,
-                'name' => \DB::connection()->getDatabaseName(),
-                'tables_count' => count($tables),
-                'tables' => array_column($tables, 'table_name')
-            ]
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Database connection failed',
-            'error' => $e->getMessage()
-        ], 500);
-    }
-});
-
-Route::get('/diagnose', function () {
-    try {
-        // Check basic Laravel
-        $checks = [];
-        
-        // 1. Check APP_KEY
-        $checks['app_key'] = !empty(env('APP_KEY')) ? '✓ Set' : '✗ Missing';
-        
-        // 2. Check database connection
-        try {
-            \DB::connection()->getPdo();
-            $checks['database'] = '✓ Connected';
-            $checks['db_name'] = \DB::connection()->getDatabaseName();
-        } catch (\Exception $e) {
-            $checks['database'] = '✗ Error: ' . $e->getMessage();
-        }
-        
-        // 3. Check storage permissions
-        $checks['storage_writable'] = is_writable(storage_path()) ? '✓ Writable' : '✗ Not writable';
-        $checks['bootstrap_writable'] = is_writable(base_path('bootstrap/cache')) ? '✓ Writable' : '✗ Not writable';
-        
-        // 4. Check environment
-        $checks['environment'] = app()->environment();
-        $checks['debug_mode'] = config('app.debug') ? 'true (should be false in production)' : 'false';
-        
-        // 5. Check loaded .env file
-        $checks['env_file'] = file_exists(base_path('.env')) ? '✓ Exists' : '✗ Missing';
-        
-        return response()->json([
-            'status' => 'diagnostic',
-            'checks' => $checks,
-            'timestamp' => now()->toISOString(),
-            'laravel_version' => app()->version(),
-            'php_version' => PHP_VERSION
-        ]);
-        
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Diagnostic failed',
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ], 500);
-    }
-});
+    
 });
