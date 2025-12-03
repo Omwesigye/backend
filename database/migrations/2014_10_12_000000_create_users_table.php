@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->enum('role', ['user', 'service_provider'])->default('user');
+            $table->string('role')->default('user');
             $table->boolean('is_approved')->default(false);
             $table->string('login_code', 6)->nullable(); // for service providers only
             $table->rememberToken();

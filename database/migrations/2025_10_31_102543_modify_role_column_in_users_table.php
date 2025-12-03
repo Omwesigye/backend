@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             // Modify the role column to include 'admin'
-            $table->enum('role', ['user', 'service_provider', 'admin'])->default('user')->change();
+            $table->string('role')->default('user')->change();
         });
     }
 
@@ -23,8 +23,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Revert back to original enum
-            $table->enum('role', ['user', 'service_provider'])->default('user')->change();
+            // Revert back to original string
+            $table->string('role')->default('user')->change();
         });
     }
 };
