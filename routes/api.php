@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\ProviderProfileController;
 use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\MigrationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -107,4 +108,34 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // CHAT ROUTES
     Route::get('/chat/conversations', [ChatController::class, 'getConversations']);
+
+
+    Route::get('/run-migrations', [MigrationController::class, 'run']);
+
+    Route::get('/test', function () {
+    try {
+        // Test database connection
+        \DB::connection()->getPdo();
+        
+        // Check if migrations ran
+        $tables = \DB::select('SELECT table_name FROM information_schema.tables WHERE table_schema = ?', ['public']);
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'API is working!',
+            'database' => [
+                'connected' => true,
+                'name' => \DB::connection()->getDatabaseName(),
+                'tables_count' => count($tables),
+                'tables' => array_column($tables, 'table_name')
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Database connection failed',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
 });
