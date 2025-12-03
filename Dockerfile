@@ -83,9 +83,8 @@ RUN php artisan migrate --force --no-interaction 2>/dev/null || true
 # ============================================
 
 # Cache configuration for better performance
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+# Only create cache directories, don't cache config during build
+RUN php artisan config:clear
 
 # ============================================
 # 8. FINAL CONFIGURATION
