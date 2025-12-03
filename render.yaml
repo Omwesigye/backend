@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: taskconnect-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: error
+    autoDeploy: true
+    healthCheckPath: /api/health
+    numInstances: 1
