@@ -138,4 +138,50 @@ Route::middleware('auth:sanctum')->group(function () {
         ], 500);
     }
 });
+
+Route::get('/diagnose', function () {
+    try {
+        // Check basic Laravel
+        $checks = [];
+        
+        // 1. Check APP_KEY
+        $checks['app_key'] = !empty(env('APP_KEY')) ? '✓ Set' : '✗ Missing';
+        
+        // 2. Check database connection
+        try {
+            \DB::connection()->getPdo();
+            $checks['database'] = '✓ Connected';
+            $checks['db_name'] = \DB::connection()->getDatabaseName();
+        } catch (\Exception $e) {
+            $checks['database'] = '✗ Error: ' . $e->getMessage();
+        }
+        
+        // 3. Check storage permissions
+        $checks['storage_writable'] = is_writable(storage_path()) ? '✓ Writable' : '✗ Not writable';
+        $checks['bootstrap_writable'] = is_writable(base_path('bootstrap/cache')) ? '✓ Writable' : '✗ Not writable';
+        
+        // 4. Check environment
+        $checks['environment'] = app()->environment();
+        $checks['debug_mode'] = config('app.debug') ? 'true (should be false in production)' : 'false';
+        
+        // 5. Check loaded .env file
+        $checks['env_file'] = file_exists(base_path('.env')) ? '✓ Exists' : '✗ Missing';
+        
+        return response()->json([
+            'status' => 'diagnostic',
+            'checks' => $checks,
+            'timestamp' => now()->toISOString(),
+            'laravel_version' => app()->version(),
+            'php_version' => PHP_VERSION
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Diagnostic failed',
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+});
 });
