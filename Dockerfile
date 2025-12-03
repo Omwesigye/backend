@@ -1,6 +1,10 @@
 FROM php:8.2-apache
 
-# 1. Install system dependencies for PostgreSQL
+# ============================================
+# 1. SYSTEM DEPENDENCIES & PHP EXTENSIONS
+# ============================================
+
+# Update packages and install dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -10,39 +14,85 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     libpq-dev \
+    libzip-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Install PHP extensions for PostgreSQL
-RUN docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd
+# Install PHP extensions for PostgreSQL and Laravel
+RUN docker-php-ext-install \
+    pdo \
+    pdo_pgsql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
+    zip
 
-# 3. Install Composer
+# ============================================
+# 2. COMPOSER & APACHE CONFIG
+# ============================================
+
+# Install Composer globally
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# 4. Enable Apache modules
+# Enable Apache rewrite module
 RUN a2enmod rewrite
 
-# 5. Set working directory
+# ============================================
+# 3. APPLICATION SETUP
+# ============================================
+
+# Set working directory
 WORKDIR /var/www/html
 
-# 6. Copy application files
+# Copy application files
 COPY . .
 
-# 7. Install PHP dependencies
+# Install PHP dependencies (production only)
 RUN composer install --no-dev --no-interaction --optimize-autoloader
 
-# 8. Set permissions
+# ============================================
+# 4. PERMISSIONS & STORAGE
+# ============================================
+
+# Set proper permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
-# 9. Create storage directories
+# Create storage directories
 RUN mkdir -p storage/framework/{cache,sessions,views}
 
-# 10. Copy Apache configuration
+# ============================================
+# 5. APACHE CONFIGURATION
+# ============================================
+
+# Copy Apache virtual host configuration
 COPY docker/apache.conf /etc/apache2/sites-available/000-default.conf
 
-# 11. Expose port
+# ============================================
+# 6. DATABASE MIGRATIONS
+# ============================================
+
+# Try to run migrations during build (will work if DB credentials are available)
+# If DB not ready during build, it will fail gracefully
+RUN php artisan migrate --force --no-interaction 2>/dev/null || true
+
+# ============================================
+# 7. PRODUCTION OPTIMIZATION
+# ============================================
+
+# Cache configuration for better performance
+RUN php artisan config:cache \
+    && php artisan route:cache \
+    && php artisan view:cache
+
+# ============================================
+# 8. FINAL CONFIGURATION
+# ============================================
+
+# Expose port 80 for Apache
 EXPOSE 80
 
-# 12. Start Apache
+# Start Apache in foreground
 CMD ["apache2-foreground"]
