@@ -35,8 +35,8 @@ RUN docker-php-ext-install \
 # Install Composer globally
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Enable Apache rewrite module
-RUN a2enmod rewrite
+# Enable Apache modules (FIX: Add mod_headers)
+RUN a2enmod rewrite headers
 
 # ============================================
 # 3. APPLICATION SETUP
@@ -71,7 +71,7 @@ RUN mkdir -p storage/framework/{cache,sessions,views}
 COPY docker/apache.conf /etc/apache2/sites-available/000-default.conf
 
 # ============================================
-# 6. DATABASE MIGRATIONS
+# 6. DATABASE MIGRATIONS (Optional)
 # ============================================
 
 # Try to run migrations during build (will work if DB credentials are available)
