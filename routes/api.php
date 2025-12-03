@@ -60,6 +60,47 @@ Route::get('/db-test', function () {
         ], 500);
     }
 });
+// Cache clear endpoint
+Route::get('/clear-cache', function () {
+    try {
+        // Clear all caches
+        Artisan::call('config:clear');
+        Artisan::call('cache:clear');
+        Artisan::call('route:clear');
+        Artisan::call('view:clear');
+        
+        // Re-cache with current environment variables
+        Artisan::call('config:cache');
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Cache cleared and reconfigured',
+            'output' => Artisan::output()
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+});
+
+// Force reload configuration
+Route::get('/reload-config', function () {
+    // This forces Laravel to reload .env
+    $app = require __DIR__.'/../bootstrap/app.php';
+    $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Configuration reloaded',
+        'env' => [
+            'DB_HOST' => env('DB_HOST'),
+            'DB_CONNECTION' => env('DB_CONNECTION'),
+            'APP_ENV' => env('APP_ENV')
+        ]
+    ]);
+});
 
 Route::get('/run-migrations', [MigrationController::class, 'run']);
 Route::get('/test', function () {
