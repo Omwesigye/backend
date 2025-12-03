@@ -29,6 +29,38 @@ use App\Http\Controllers\MigrationController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+Route::get('/db-test', function () {
+    $host = getenv('DB_HOST');
+    $dsn = "pgsql:host=$host;port=" . getenv('DB_PORT') . ";dbname=" . getenv('DB_DATABASE');
+    
+    try {
+        $pdo = new PDO($dsn, getenv('DB_USERNAME'), getenv('DB_PASSWORD'));
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Database connected successfully!',
+            'connection' => [
+                'host' => $host,
+                'port' => getenv('DB_PORT'),
+                'database' => getenv('DB_DATABASE'),
+                'username' => getenv('DB_USERNAME'),
+                'dsn' => $dsn
+            ]
+        ]);
+    } catch (PDOException $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'connection_details' => [
+                'host' => $host,
+                'dsn' => $dsn,
+                'full_error' => $e
+            ]
+        ], 500);
+    }
+});
+
 Route::get('/run-migrations', [MigrationController::class, 'run']);
 Route::get('/test', function () {
     try {
